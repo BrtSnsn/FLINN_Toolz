@@ -1,0 +1,255 @@
+:root {
+    --bg-color: #f5f7fa;
+    --sidebar-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --scan-btn: #10b981;
+    --scan-btn-hover: #059669;
+    --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    
+    /* Precise typography to sync gutter and textarea */
+    --editor-font-size: 13px;
+    --editor-line-height: 24px;
+    --editor-padding-y: 12px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body, html {
+    height: 100vh;
+    font-family: var(--font-main);
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    overflow: hidden;
+}
+
+.layout {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* Left Panel */
+.sidebar {
+    width: 380px; /* Slightly wider to accommodate gutter */
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.03);
+    z-index: 10;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0; 
+}
+
+.input-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#productionDate {
+    padding: var(--editor-padding-y);
+    font-size: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    color: var(--text-main);
+    background-color: #f8fafc;
+    transition: all 0.2s;
+    flex-shrink: 0; 
+}
+
+#productionDate:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    background-color: #fff;
+}
+
+/* Editor Container with Gutter */
+.editor-container {
+    display: flex;
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #f8fafc;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.editor-container:focus-within {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    background-color: #fff;
+}
+
+/* The Visual Marker Column */
+.gutter {
+    width: 32px;
+    background-color: #f1f5f9;
+    border-right: 1px solid var(--border-color);
+    padding-top: var(--editor-padding-y);
+    padding-bottom: var(--editor-padding-y);
+    overflow: hidden; /* Hide scrollbar, scroll controlled by JS */
+    user-select: none;
+}
+
+.gutter-line {
+    height: var(--editor-line-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marker-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* The Standard Textarea */
+#dataInput {
+    flex: 1;
+    border: none;
+    padding: var(--editor-padding-y) 12px;
+    font-family: var(--font-mono);
+    font-size: var(--editor-font-size);
+    line-height: var(--editor-line-height);
+    background-color: transparent;
+    outline: none;
+    resize: none;
+    white-space: pre; /* Forces horizontal scrolling instead of wrapping lines */
+    overflow: auto;
+}
+
+/* Right Panel */
+.main-content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 50px;
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.card.scanned {
+    opacity: 0.35;
+    filter: grayscale(100%);
+    box-shadow: none;
+}
+
+.card.scanned .qr-title,
+.card.scanned .qr-value {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.qr-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    min-width: 0; 
+}
+
+.qr-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.qr-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 16px;
+}
+
+.qr-canvas {
+    width: 150px;
+    height: 150px;
+    margin-bottom: 16px;
+    background-color: white;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.payload-helper {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: #ffffff;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    text-align: center;
+    word-break: break-all;
+}
+
+.card-actions {
+    padding-left: 20px;
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 160px;
+}
+
+.btn-scan {
+    background-color: var(--scan-btn);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.2s;
+}
+
+.btn-scan:hover {
+    background-color: var(--scan-btn-hover);
+}
+
+.card.scanned .btn-scan {
+    background-color: var(--text-muted);
+}

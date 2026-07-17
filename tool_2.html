@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Generator Platform</title>
+    
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
+    <!-- Extracted CSS -->
+    <link rel="stylesheet" href="css/qr-style.css">
+</head>
+<body>
+
+    <div class="layout">
+        <!-- Left Panel -->
+        <div class="sidebar">
+            <div class="input-group" style="flex-shrink: 0;">
+                <label for="productionDate">Production Date</label>
+                <input type="text" id="productionDate">
+            </div>
+            
+            <div class="input-group" style="flex: 1;">
+                <label>Data Input</label>
+                <div class="editor-container">
+                    <!-- Visual Marker Gutter -->
+                    <div id="gutter" class="gutter"></div>
+                    <!-- Standard Stable Textarea -->
+                    <textarea id="dataInput" spellcheck="false" placeholder="Paste Excel data here..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="main-content" id="qrContainer">
+            <!-- Cards generated dynamically here -->
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+    <!-- Application Logic -->
+    <script src="js/qr-app.js"></script>
+</body>
+</html>
