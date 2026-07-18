@@ -17,7 +17,6 @@ let currentEngineMode = 'A'; // Mode A: Cap & Curtail, Mode B: Required Extra Ho
 let systemHasConflict = false;
 
 // Baseline Definitions Mapping structure matching Section 3 Scorecard Registry
-// Default Gross Hours modified to 112, AU set to 100%
 let scorecardDefaults = {
     l1: { gross: 112.0, ooe: 80.9, au: 100.0, rates: { pregel: 0.5, grof: 1.8, htf: 1.8 }, demand: { pregel: 19.2, grof: 56.3, htf: 36.7 } },
     l2: { gross: 112.0, ooe: 80.9, au: 100.0, rates: { pregel: 0.5, grof: 1.8, htf: 1.8 }, demand: { pregel: 0.0, grof: 0.0, htf: 157.7 } }
@@ -55,6 +54,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // Wipe any cached bindings forcefully
     clearAllChartAxes(); 
     resetAllOverrides();
+
+    // INJECTION: Load saved scenario state on boot
+    loadScenarioState();
 });
 
 // Toggle Accordion Panel Logic
@@ -566,6 +568,9 @@ function runSolverPipeline() {
 
     // Refresh Monthly & Yearly Volume Projections Box
     refreshProjections();
+
+    // INJECTION: Ensure every calculation run saves the state
+    saveScenarioState();
 }
 
 // Applies dynamic accent highlights and updates contextual placeholders based on active input states
@@ -1000,7 +1005,7 @@ function initChartArchitecture() {
 function refreshChartVisualizationData() {
     if (!simulationChartInstance) return;
 
-    // Block updates logic routing cascade sequence frames if axes mappings are unassigned
+    // Block updates if axes are unassigned
     if (!assignedXAxis || !assignedYAxis) {
         simulationChartInstance.data.datasets[0].data = [];
         simulationChartInstance.data.datasets[1].data = [];
@@ -1010,76 +1015,67 @@ function refreshChartVisualizationData() {
         return;
     }
 
-    // Extract baseline / runtime attributes anchors data states bounds properties 
-    let activeXAnchorVal = extractActiveRealityDisplayVal(assignedXAxis);
-    let activeYAnchorVal = extractActiveRealityDisplayVal(assignedYAxis);
+    // --- STABLE SWEEP WINDOW DEFINITIONS ---
+    // Use fixed physical limits to prevent the grid from resizing
+    const AXIS_LIMITS = {
+        percentage: { min: 0, max: 100 },
+        hours:      { min: 0, max: 168 },
+        tonnage:    { min: 0, max: 300 } 
+    };
 
-    // Calibrate operational sweep windows boundaries constraints range matching instructions rule
-    let checkPercentage = assignedXAxis.includes('ooe') || assignedXAxis.includes('au') || assignedXAxis.includes('time') || assignedXAxis.includes('output');
-    let sweepPointsArray = [];
-    
-    let minSweepBound = checkPercentage ? 0 : activeXAnchorVal * 0.8;
-    let maxSweepBound = checkPercentage ? 100 : activeXAnchorVal * 1.2;
+    const isPercentage = assignedXAxis.includes('ooe') || assignedXAxis.includes('au') || assignedXAxis.includes('time') || assignedXAxis.includes('output');
+    const isHours = assignedXAxis.includes('gross_hrs');
+    const limits = isPercentage ? AXIS_LIMITS.percentage : (isHours ? AXIS_LIMITS.hours : AXIS_LIMITS.tonnage);
 
-    // Handle edge configurations structures boundary setups
-    if (!checkPercentage && activeXAnchorVal === 0) {
-        minSweepBound = 0;
-        maxSweepBound = 100; // Create artificial numerical window sweep span
-    }
+    const minSweepBound = limits.min;
+    const maxSweepBound = limits.max;
+    const resolution = 30; // Higher resolution for smooth curves
+    const allocationIncrementStep = (maxSweepBound - minSweepBound) / (resolution - 1);
 
-    let allocationIncrementStep = (maxSweepBound - minSweepBound) / 9; // Generate 10 evenly divided plot coordinates entries
-
-    // Identify internal programmatic ID mapping parameters keys representing input rows targets
+    // Identify target input for simulation
     let xParts = assignedXAxis.split('_');
-    let mappedInputElementTargetID = "";
-    if (xParts.length === 2) mappedInputElementTargetID = `override_${xParts[0]}_${xParts[1]}`;
-    else if (xParts.length === 3) mappedInputElementTargetID = `override_${xParts[0]}_${xParts[1]}_${xParts[2]}`;
+    let mappedInputElementTargetID = (xParts.length === 2) 
+        ? `override_${xParts[0]}_${xParts[1]}` 
+        : `override_${xParts[0]}_${xParts[1]}_${xParts[2]}`;
 
     let structuredCurvePointsDataset = [];
 
-    // Execute background sweeping simulation processing sequence cycles loop
-    for (let i = 0; i < 10; i++) {
+    // Background sweeping simulation loop
+    for (let i = 0; i < resolution; i++) {
         let temporaryStepVal = minSweepBound + (allocationIncrementStep * i);
-        
-        // Build execution map capturing current system states parameters snapshots overrides values 
         let virtualStateOverrideTracker = {};
         
-        // Extract active structural elements list and capture their live fields parameters weights
         const inputBoxes = document.querySelectorAll('input[id^="override_"]');
         inputBoxes.forEach(box => {
             if (box.value !== '') virtualStateOverrideTracker[box.id] = parseFloat(box.value);
         });
 
-        // Force step evaluation criteria value inside targeted parameter slot position anchor override
-        virtualStateOverrideTracker[mappedInputElementTargetID] = temporaryStepVal;
+        virtualStateOverrideTracker[mappedInputElementTargetID] = Math.max(0, temporaryStepVal);
 
-        // Run mathematical engine calculations routines sequence using cloned state
         let stepCalculatedRealitiesOutputsMap = executeCapacitySolverLogic(virtualStateOverrideTracker);
-
-        // Helper local values queries parsing routine extracting output parameters from background sweep snapshots
         let computedStepYValue = queryVirtualOutputsMetricsRealityValue(assignedYAxis, stepCalculatedRealitiesOutputsMap);
+        
         structuredCurvePointsDataset.push({ x: temporaryStepVal, y: computedStepYValue });
     }
 
-    // Adjust vertical scales axis clamping limitations based on delta requirements profiles rules properties
-    let permitsNegativeValues = assignedYAxis.includes('delta') || assignedYAxis.includes('variance');
-    if (permitsNegativeValues) {
-        delete simulationChartInstance.options.scales.y.min;
-    } else {
-        simulationChartInstance.options.scales.y.min = 0;
-    }
-
-    // Push processed points collections maps into active canvas dataset configurations frameworks
+    // Update dataset with new high-res curve
     simulationChartInstance.data.datasets[0].data = structuredCurvePointsDataset;
-    
-    // Map standalone "You Are Here" locator coordinate point array cleanly on layout tracking line
-    simulationChartInstance.data.datasets[1].data = [{ x: activeXAnchorVal, y: activeYAnchorVal }];
+    simulationChartInstance.data.datasets[1].data = [{ 
+        x: extractActiveRealityDisplayVal(assignedXAxis), 
+        y: extractActiveRealityDisplayVal(assignedYAxis) 
+    }];
 
-    // Push text strings labels definitions properties inside layout matrix configurations
+    // Update axis labels
     simulationChartInstance.options.scales.x.title.text = prettyLabels[assignedXAxis].toUpperCase();
     simulationChartInstance.options.scales.y.title.text = prettyLabels[assignedYAxis].toUpperCase();
 
-    simulationChartInstance.update('none'); // Update structures canvas mapping layout parameters smoothly
+    // --- STABLE AXIS LOCKING ---
+    simulationChartInstance.options.scales.x.min = limits.min;
+    simulationChartInstance.options.scales.x.max = limits.max;
+    simulationChartInstance.options.scales.y.min = 0;
+    delete simulationChartInstance.options.scales.y.suggestedMax; // Allow Y-axis to scale naturally for tonnage
+    
+    simulationChartInstance.update('none'); 
 }
 
 // Deep reader parsing specific properties parameters records objects out of simulated records output maps
@@ -1108,4 +1104,68 @@ function queryVirtualOutputsMetricsRealityValue(metricKey, virtualOutputsSnapsho
         if (type === 'delta') return prodItem.calculatedMass - prodItem.demand;
     }
     return 0;
+}
+
+// STATE MANAGEMENT ARCHITECTURE
+function captureCurrentState() {
+    let state = {
+        overrides: {},
+        mode: currentEngineMode,
+        sharedOp: document.getElementById('shared_operator_toggle').checked
+    };
+    
+    // Grab all active user overrides
+    document.querySelectorAll('input[id^="override_"]').forEach(box => {
+        if (box.value !== '') state.overrides[box.id] = parseFloat(box.value);
+    });
+    
+    return state;
+}
+
+function saveScenarioState() {
+    const state = captureCurrentState();
+    const encodedState = btoa(JSON.stringify(state)); // Base64 encode for safety
+    
+    // 1. Save to Local Storage (survives refreshes)
+    localStorage.setItem('ultrawide_sop_state', encodedState);
+    
+    // 2. Update URL silently so you can copy/paste it to the COO
+    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?scenario=' + encodedState;
+    window.history.replaceState({path: newUrl}, '', newUrl);
+}
+
+function loadScenarioState() {
+    let encodedState = null;
+    
+    // Check URL parameters first (if COO opens your shared link)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('scenario')) {
+        encodedState = urlParams.get('scenario');
+    } else {
+        // Fallback to local storage
+        encodedState = localStorage.getItem('ultrawide_sop_state');
+    }
+
+    if (encodedState) {
+        try {
+            const state = JSON.parse(atob(encodedState));
+            
+            // Restore Engine Mode
+            if (state.mode !== currentEngineMode) toggleEngineMode();
+            
+            // Restore Shared Operator Checkbox
+            document.getElementById('shared_operator_toggle').checked = state.sharedOp;
+            
+            // Restore Overrides
+            for (const [id, val] of Object.entries(state.overrides)) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = val;
+                    handleOverrideInput(el); // Force UI styling updates
+                }
+            }
+        } catch (e) {
+            console.error("Failed to parse scenario state.", e);
+        }
+    }
 }
