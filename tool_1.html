@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultrawide Weekly 3-Field Production Capacity Solver</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Standardized Directory CSS Links: Base first, then Specific -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/solver.css">
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
+    <!-- Header Section -->
+    <header class="bg-slate-950 px-6 py-3 flex items-center justify-between border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div class="flex items-center">
+            <span class="text-orange-500 font-extrabold tracking-wide mr-8 text-lg">ULTRAWIDE CAPACITY SOLVER</span>
+            <div class="flex items-center bg-slate-900 p-1 rounded-full border border-slate-700 select-none cursor-pointer" onclick="toggleEngineMode()">
+                <span id="modeA_label" class="text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 text-white bg-orange-600">MODE A: Cap & Curtail</span>
+                <span id="modeB_label" class="text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 text-slate-400">MODE B: Calc Extra Hrs</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <label class="flex items-center gap-2 bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg cursor-pointer hover:border-slate-600 transition-colors">
+                <input type="checkbox" id="shared_operator_toggle" autocomplete="off" onchange="runSolverPipeline()" class="w-4 h-4 accent-orange-500 cursor-pointer">
+                <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider">👥 Shared Solo Operator Constraint</span>
+            </label>
+            <button onclick="resetAllOverrides()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded shadow transition-all transform active:scale-95 flex items-center gap-2">
+                <span>🔄 Reset Simulator Overrides</span>
+            </button>
+        </div>
+    </header>
+
+    <div id="global_alert_banner" class="hidden bg-red-950 border-b border-red-800 text-red-200 px-6 py-2.5 text-sm font-bold text-center tracking-wide animate-pulse">
+        ⚠️ Invalid Configuration: Over-constrained parameters detected. Check highlighted fields.
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 w-full px-6 py-6 grid grid-cols-12 gap-6 items-start">
+        
+        <!-- Data Input Section -->
+        <section class="col-span-7 space-y-6">
+            <!-- Scorecard Panel -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                <button onclick="toggleAccordion('scorecard_panel')" class="w-full px-5 py-3 bg-slate-900/60 flex items-center justify-between text-left border-b border-slate-800 hover:bg-slate-900 transition-colors">
+                    <span class="text-sm font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                        <span>⚙️</span> Revise Scorecard Baselines <span class="text-xs text-slate-500 font-normal lowercase">(hidden corporate defaults architecture)</span>
+                    </span>
+                    <span id="scorecard_toggle_icon" class="text-slate-400 text-xs transform transition-transform duration-200">▶</span>
+                </button>
+                
+                <div id="scorecard_panel" class="hidden p-5 bg-slate-950 grid grid-cols-2 gap-6 border-t border-slate-900">
+                    <!-- Line 1 Scorecard -->
+                    <div class="space-y-3 bg-slate-900/40 p-4 rounded-lg border border-slate-800">
+                        <h4 class="text-xs font-extrabold text-orange-400 tracking-wider border-b border-slate-800 pb-1.5 uppercase">Line 1 Corporate Defaults</h4>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">Gross Hours</label>
+                                <input type="number" step="0.1" id="sc_l1_gross" value="112.0" onchange="updateScorecardBaselines()" autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-center">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">OOE (%)</label>
+                                <input type="number" step="0.1" id="sc_l1_ooe" value="80.9" onchange="updateScorecardBaselines()" autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-center">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">AU (%)</label>
+                                <input type="number" step="0.1" id="sc_l1_au" value="100.0" onchange="updateScorecardBaselines()" autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-center">
+                            </div>
+                        </div>
+                        <div class="pt-2 text-xs space-y-1.5">
+                            <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Run-Rates (t/h)</span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <input type="number" step="0.1" id="sc_l1_rate_pregel" value="0.5" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Pregel">
+                                <input type="number" step="0.1" id="sc_l1_rate_grof" value="1.8" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Grof">
+                                <input type="number" step="0.1" id="sc_l1_rate_htf" value="1.8" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="HTF">
+                            </div>
+                        </div>
+                        <div class="pt-2 text-xs space-y-1.5">
+                            <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Historical Demand (tons)</span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <input type="number" step="0.1" id="sc_l1_demand_pregel" value="19.2" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Pregel">
+                                <input type="number" step="0.1" id="sc_l1_demand_grof" value="56.3" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Grof">
+                                <input type="number" step="0.1" id="sc_l1_demand_htf" value="36.7" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="HTF">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Line 2 Scorecard -->
+                    <div class="space-y-3 bg-slate-900/40 p-4 rounded-lg border border-slate-800">
+                        <h4 class="text-xs font-extrabold text-orange-400 tracking-wider border-b border-slate-800 pb-1.5 uppercase">Line 2 Corporate Defaults</h4>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">Gross Hours</label>
+                                <input type="number" step="0.1" id="sc_l2_gross" value="112.0" onchange="updateScorecardBaselines()" autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-center">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">OOE (%)</label>
+                                <input type="number" step="0.1" id="sc_l2_ooe" value="80.9" onchange="updateScorecardBaselines()" autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-center">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">AU (%)</label>
+                                <input type="number" step="0.1" id="sc_l2_au" value="100.0" onchange="updateScorecardBaselines()" autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-center">
+                            </div>
+                        </div>
+                        <div class="pt-2 text-xs space-y-1.5">
+                            <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Run-Rates (t/h)</span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <input type="number" step="0.1" id="sc_l2_rate_pregel" value="0.5" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Pregel">
+                                <input type="number" step="0.1" id="sc_l2_rate_grof" value="1.8" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Grof">
+                                <input type="number" step="0.1" id="sc_l2_rate_htf" value="1.8" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="HTF">
+                            </div>
+                        </div>
+                        <div class="pt-2 text-xs space-y-1.5">
+                            <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Historical Demand (tons)</span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <input type="number" step="0.1" id="sc_l2_demand_pregel" value="0.0" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Pregel">
+                                <input type="number" step="0.1" id="sc_l2_demand_grof" value="0.0" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="Grof">
+                                <input type="number" step="0.1" id="sc_l2_demand_htf" value="157.7" onchange="updateScorecardBaselines()" autocomplete="off" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 font-mono text-center" placeholder="HTF">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line 1 and Line 2 Operational Matrices -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-4">
+                    <h2 class="text-xs font-black tracking-widest text-slate-300 bg-slate-950 px-4 py-2 rounded border border-slate-800 uppercase text-center">LINE 1 OPERATIONAL MATRIX</h2>
+                    <!-- Block A Line 1-->
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2">
+                        <span class="block text-[10px] font-extrabold tracking-wider text-orange-400 uppercase">Block A: Line Capacities</span>
+                        
+                        <div class="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase px-1">
+                            <div class="w-5"></div>
+                            <div class="w-24 text-left">Parameter</div>
+                            <div class="w-0 min-w-0 flex-1 text-center">User Override</div>
+                            <div class="w-0 min-w-0 flex-1 text-center">Baseline</div>
+                            <div class="w-0 min-w-0 flex-1 text-center">Active Reality</div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <div draggable="true" ondragstart="handleDragStart(event, 'l1_gross_hrs')" class="w-5 h-7 flex items-center justify-center bg-slate-800 hover:bg-orange-600 rounded cursor-grab text-slate-400 hover:text-white font-mono text-[10px]">⋮⋮</div>
+                            <div class="w-24 text-[11px] font-semibold text-slate-300 truncate">Gross Weekly Hrs</div>
+                            <input type="number" step="0.1" id="override_l1_gross_hrs" oninput="handleOverrideInput(this)" autocomplete="off" class="w-0 min-w-0 flex-1 bg-slate-950 text-slate-100 border border-slate-800 rounded px-1.5 py-1 text-center font-mono" placeholder="--">
+                            <input type="text" id="baseline_l1_gross_hrs" disabled readonly class="w-0 min-w-0 flex-1 bg-slate-800 text-slate-400 border border-slate-700/60 rounded px-1.5 py-1 text-center font-mono">
+                            <input type="text" id="reality_l1_gross_hrs" disabled readonly class="w-0 min-w-0 flex-1 rounded px-1.5 py-1 text-center font-mono font-bold">
+                        </div>
+
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <div draggable="true" ondragstart="handleDragStart(event, 'l1_ooe')" class="w-5 h-7 flex items-center justify-center bg-slate-800 hover:bg-orange-600 rounded cursor-grab text-slate-400 hover:text-white font-mono text-[10px]">⋮⋮</div>
+                            <div class="w-24 text-[11px] font-semibold text-slate-300 truncate">OOE (%)</div>
+                            <input type="number" step="0.1" id="override_l1_ooe" oninput="handleOverrideInput(this)" autocomplete="off" class="w-0 min-w-0 flex-1 bg-slate-950 text-slate-100 border border-slate-800 rounded px-1.5 py-1 text-center font-mono" placeholder="--">
+                            <input type="text" id="baseline_l1_ooe" disabled readonly class="w-0 min-w-0 flex-1 bg-slate-800 text-slate-400 border border-slate-700/60 rounded px-1.5 py-1 text-center font-mono">
+                            <input type="text" id="reality_l1_ooe" disabled readonly class="w-0 min-w-0 flex-1 rounded px-1.5 py-1 text-center font-mono font-bold">
+                        </div>
+
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <div draggable="true" ondragstart="handleDragStart(event, 'l1_au')" class="w-5 h-7 flex items-center justify-center bg-slate-800 hover:bg-orange-600 rounded cursor-grab text-slate-400 hover:text-white font-mono text-[10px]">⋮⋮</div>
+                            <div class="w-24 text-[11px] font-semibold text-slate-300 truncate">Asset Util (%)</div>
+                            <input type="number" step="0.1" id="override_l1_au" oninput="handleOverrideInput(this)" autocomplete="off" class="w-0 min-w-0 flex-1 bg-slate-950 text-slate-100 border border-slate-800 rounded px-1.5 py-1 text-center font-mono" placeholder="--">
+                            <input type="text" id="baseline_l1_au" disabled readonly class="w-0 min-w-0 flex-1 bg-slate-800 text-slate-400 border border-slate-700/60 rounded px-1.5 py-1 text-center font-mono">
+                            <input type="text" id="reality_l1_au" disabled readonly class="w-0 min-w-0 flex-1 rounded px-1.5 py-1 text-center font-mono font-bold">
+                        </div>
+                    </div>
+
+                    <div id="l1_products_container" class="space-y-3"></div>
+
+                    <!-- Line 1 Output -->
+                    <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl space-y-2">
+                        <span class="block text-[10px] font-black tracking-wider text-slate-400 uppercase">LINE 1 OUTPUT SUMMARY</span>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="bg-slate-900 border border-slate-800 p-1.5 rounded">
+                                <span class="block text-[9px] text-slate-500 font-bold uppercase">Baseline</span>
+                                <div id="summary_l1_baseline" class="font-mono text-sm text-slate-400 font-bold">0.00</div>
+                            </div>
+                            <div class="bg-slate-900 border border-slate-800 p-1.5 rounded relative group">
+                                <div draggable="true" ondragstart="handleDragStart(event, 'line1_total_out')" class="absolute top-1 left-1 opacity-0 group-hover:opacity-100 bg-orange-600 text-white rounded px-0.5 text-[8px] cursor-grab transition-opacity">⋮⋮</div>
+                                <span class="block text-[9px] text-orange-500 font-bold uppercase">Active Tons</span>
+                                <div id="summary_l1_active" class="font-mono text-sm text-orange-400 font-extrabold">0.00</div>
+                            </div>
+                            <div id="summary_l1_delta_box" class="p-1.5 rounded border flex flex-col justify-center">
+                                <span class="block text-[9px] font-bold uppercase">Delta</span>
+                                <div id="summary_l1_delta" class="font-mono text-sm font-bold">0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h2 class="text-xs font-black tracking-widest text-slate-300 bg-slate-950 px-4 py-2 rounded border border-slate-800 uppercase text-center">LINE 2 OPERATIONAL MATRIX</h2>
+                    <!-- Block A Line 2 -->
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2">
+                        <span class="block text-[10px] font-extrabold tracking-wider text-orange-400 uppercase">Block A: Line Capacities</span>
+                        
+                        <div class="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase px-1">
+                            <div class="w-5"></div>
+                            <div class="w-24 text-left">Parameter</div>
+                            <div class="w-0 min-w-0 flex-1 text-center">User Override</div>
+                            <div class="w-0 min-w-0 flex-1 text-center">Baseline</div>
+                            <div class="w-0 min-w-0 flex-1 text-center">Active Reality</div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <div draggable="true" ondragstart="handleDragStart(event, 'l2_gross_hrs')" class="w-5 h-7 flex items-center justify-center bg-slate-800 hover:bg-orange-600 rounded cursor-grab text-slate-400 hover:text-white font-mono text-[10px]">⋮⋮</div>
+                            <div class="w-24 text-[11px] font-semibold text-slate-300 truncate">Gross Weekly Hrs</div>
+                            <input type="number" step="0.1" id="override_l2_gross_hrs" oninput="handleOverrideInput(this)" autocomplete="off" class="w-0 min-w-0 flex-1 bg-slate-950 text-slate-100 border border-slate-800 rounded px-1.5 py-1 text-center font-mono" placeholder="--">
+                            <input type="text" id="baseline_l2_gross_hrs" disabled readonly class="w-0 min-w-0 flex-1 bg-slate-800 text-slate-400 border border-slate-700/60 rounded px-1.5 py-1 text-center font-mono">
+                            <input type="text" id="reality_l2_gross_hrs" disabled readonly class="w-0 min-w-0 flex-1 rounded px-1.5 py-1 text-center font-mono font-bold">
+                        </div>
+
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <div draggable="true" ondragstart="handleDragStart(event, 'l2_ooe')" class="w-5 h-7 flex items-center justify-center bg-slate-800 hover:bg-orange-600 rounded cursor-grab text-slate-400 hover:text-white font-mono text-[10px]">⋮⋮</div>
+                            <div class="w-24 text-[11px] font-semibold text-slate-300 truncate">OOE (%)</div>
+                            <input type="number" step="0.1" id="override_l2_ooe" oninput="handleOverrideInput(this)" autocomplete="off" class="w-0 min-w-0 flex-1 bg-slate-950 text-slate-100 border border-slate-800 rounded px-1.5 py-1 text-center font-mono" placeholder="--">
+                            <input type="text" id="baseline_l2_ooe" disabled readonly class="w-0 min-w-0 flex-1 bg-slate-800 text-slate-400 border border-slate-700/60 rounded px-1.5 py-1 text-center font-mono">
+                            <input type="text" id="reality_l2_ooe" disabled readonly class="w-0 min-w-0 flex-1 rounded px-1.5 py-1 text-center font-mono font-bold">
+                        </div>
+
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <div draggable="true" ondragstart="handleDragStart(event, 'l2_au')" class="w-5 h-7 flex items-center justify-center bg-slate-800 hover:bg-orange-600 rounded cursor-grab text-slate-400 hover:text-white font-mono text-[10px]">⋮⋮</div>
+                            <div class="w-24 text-[11px] font-semibold text-slate-300 truncate">Asset Util (%)</div>
+                            <input type="number" step="0.1" id="override_l2_au" oninput="handleOverrideInput(this)" autocomplete="off" class="w-0 min-w-0 flex-1 bg-slate-950 text-slate-100 border border-slate-800 rounded px-1.5 py-1 text-center font-mono" placeholder="--">
+                            <input type="text" id="baseline_l2_au" disabled readonly class="w-0 min-w-0 flex-1 bg-slate-800 text-slate-400 border border-slate-700/60 rounded px-1.5 py-1 text-center font-mono">
+                            <input type="text" id="reality_l2_au" disabled readonly class="w-0 min-w-0 flex-1 rounded px-1.5 py-1 text-center font-mono font-bold">
+                        </div>
+                    </div>
+
+                    <div id="l2_products_container" class="space-y-3"></div>
+
+                    <!-- Line 2 Output -->
+                    <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl space-y-2">
+                        <span class="block text-[10px] font-black tracking-wider text-slate-400 uppercase">LINE 2 OUTPUT SUMMARY</span>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="bg-slate-900 border border-slate-800 p-1.5 rounded">
+                                <span class="block text-[9px] text-slate-500 font-bold uppercase">Baseline</span>
+                                <div id="summary_l2_baseline" class="font-mono text-sm text-slate-400 font-bold">0.00</div>
+                            </div>
+                            <div class="bg-slate-900 border border-slate-800 p-1.5 rounded relative group">
+                                <div draggable="true" ondragstart="handleDragStart(event, 'line2_total_out')" class="absolute top-1 left-1 opacity-0 group-hover:opacity-100 bg-orange-600 text-white rounded px-0.5 text-[8px] cursor-grab transition-opacity">⋮⋮</div>
+                                <span class="block text-[9px] text-orange-500 font-bold uppercase">Active Tons</span>
+                                <div id="summary_l2_active" class="font-mono text-sm text-orange-400 font-extrabold">0.00</div>
+                            </div>
+                            <div id="summary_l2_delta_box" class="p-1.5 rounded border flex flex-col justify-center">
+                                <span class="block text-[9px] font-bold uppercase">Delta</span>
+                                <div id="summary_l2_delta" class="font-mono text-sm font-bold">0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Plant Summary -->
+            <div class="bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
+                <span class="block text-xs font-black tracking-widest text-orange-500 uppercase mb-3">GLOBAL PLANT PERFORMANCE (LINE 1 + LINE 2 COMBINED)</span>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-lg text-center">
+                        <span class="block text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Combined Baseline Tonnage</span>
+                        <div id="global_summary_baseline" class="font-mono text-xl text-slate-300 font-black mt-1">0.00 tons</div>
+                    </div>
+                    <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-lg text-center relative group">
+                        <div draggable="true" ondragstart="handleDragStart(event, 'combined_active_tonnage')" class="absolute top-1.5 left-2 opacity-0 group-hover:opacity-100 bg-orange-600 text-white rounded px-1 py-0.5 text-[9px] cursor-grab transition-opacity">⋮⋮ DRAG TOTAL</div>
+                        <span class="block text-[10px] text-orange-500 font-extrabold uppercase tracking-wide">Combined New Active Tonnage</span>
+                        <div id="global_summary_active" class="font-mono text-xl text-orange-400 font-black mt-1">0.00 tons</div>
+                    </div>
+                    <div id="global_summary_delta_box" class="p-3 rounded-lg border flex flex-col justify-center text-center">
+                        <span class="block text-[10px] font-extrabold uppercase tracking-wide">Grand Operational Delta</span>
+                        <div id="global_summary_delta" class="font-mono text-xl font-black mt-1">0.00 tons</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Side Visualizations Panel -->
+        <section class="col-span-5">
+            <div class="sticky top-[72px] space-y-4">
+                <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-xl space-y-4">
+                    
+                    <div id="master_feedback_card" class="p-4 rounded-xl transition-all duration-300 text-center border">
+                        <span id="feedback_title" class="block text-xs font-black uppercase tracking-widest text-slate-400">System Checklist Initialization</span>
+                        <div id="feedback_metric" class="font-mono text-2xl font-black my-1">---</div>
+                        <p id="feedback_desc" class="text-xs font-medium text-slate-400">Loading industrial parameters...</p>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div id="bay_x" ondragover="allowDrop(event)" class="border-2 border-dashed border-slate-800 bg-slate-900/60 rounded-lg p-2 flex flex-col items-center justify-center text-center min-h-[72px] transition-all" ondrop="handleDrop(event, 'X')">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">X-Axis Variable</span>
+                            <div id="docked_x" class="text-[11px] font-extrabold text-orange-400 bg-slate-950 px-2 py-1 rounded border border-slate-800 truncate max-w-full hidden">Empty</div>
+                            <span id="placeholder_x" class="text-[10px] text-slate-600 font-mono">Drop here</span>
+                        </div>
+                        <div id="bay_y" ondragover="allowDrop(event)" class="border-2 border-dashed border-slate-800 bg-slate-900/60 rounded-lg p-2 flex flex-col items-center justify-center text-center min-h-[72px] transition-all" ondrop="handleDrop(event, 'Y')">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Y-Axis Metric</span>
+                            <div id="docked_y" class="text-[11px] font-extrabold text-blue-400 bg-slate-950 px-2 py-1 rounded border border-slate-800 truncate max-w-full hidden">Empty</div>
+                            <span id="placeholder_y" class="text-[10px] text-slate-600 font-mono">Drop here</span>
+                        </div>
+                        <div id="bay_z" ondragover="allowDrop(event)" class="border-2 border-dashed border-slate-800 bg-slate-900/60 rounded-lg p-2 flex flex-col items-center justify-center text-center min-h-[72px] transition-all" ondrop="handleDrop(event, 'Z')">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Slider (Z) [Max 3]</span>
+                            <div id="docked_z_list" class="w-full flex flex-wrap gap-1 justify-center max-h-[50px] overflow-y-auto hidden"></div>
+                            <span id="placeholder_z" class="text-[10px] text-slate-600 font-mono">Drop here</span>
+                        </div>
+                    </div>
+
+                    <div id="z_sliders_wrapper" class="hidden bg-slate-900 border border-slate-800 p-3 rounded-lg space-y-3">
+                        <span class="block text-[10px] font-bold tracking-widest text-slate-400 uppercase">Interactive Context Shifters (Z-Axes)</span>
+                        <div id="z_sliders_stack" class="space-y-2.5"></div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button onclick="clearAllChartAxes()" class="text-[10px] font-bold text-slate-400 hover:text-orange-500 transition-colors uppercase tracking-wider">
+                            ❌ Clear All Chart Axes
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 shadow-inner" style="position: relative; width: 100%; height: 410px;">
+                        <canvas id="predictiveSimulationChart"></canvas>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-lg shadow-inner">
+                        <div class="flex justify-between items-center mb-2 border-b border-slate-800 pb-1.5">
+                            <span class="text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">Long-Term Run-Rate Projections</span>
+                            <span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Base: 52 Wks/Yr</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-[10px] border-b border-slate-800 pb-1 mb-1 text-slate-500 font-bold uppercase">
+                            <div class="text-left">Product / Total</div>
+                            <div class="text-right">Monthly (t)</div>
+                            <div class="text-right">Yearly (t)</div>
+                        </div>
+                        <div class="space-y-1.5 font-mono text-xs mt-1">
+                            <div class="grid grid-cols-3 gap-2 text-slate-300">
+                                <div class="text-left font-sans text-[11px] font-semibold">Pregel (L1+L2)</div>
+                                <div id="proj_mo_pregel" class="text-right">0.00</div>
+                                <div id="proj_yr_pregel" class="text-right font-bold text-slate-200">0.00</div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-slate-300">
+                                <div class="text-left font-sans text-[11px] font-semibold">Grof (L1+L2)</div>
+                                <div id="proj_mo_grof" class="text-right">0.00</div>
+                                <div id="proj_yr_grof" class="text-right font-bold text-slate-200">0.00</div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-slate-300">
+                                <div class="text-left font-sans text-[11px] font-semibold">HTF (L1+L2)</div>
+                                <div id="proj_mo_htf" class="text-right">0.00</div>
+                                <div id="proj_yr_htf" class="text-right font-bold text-slate-200">0.00</div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-orange-400 border-t border-slate-800 pt-1.5 mt-1.5 font-bold">
+                                <div class="text-left text-[10px] uppercase font-sans tracking-wider">Grand Total</div>
+                                <div id="proj_mo_total" class="text-right">0.00</div>
+                                <div id="proj_yr_total" class="text-right text-orange-500">0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Script execution matched to the JS directory -->
+    <script src="js/capacity_solver.js"></script>
+</body>
+</html>

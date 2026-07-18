@@ -1,0 +1,51 @@
+/* GLOBAL.CSS - Foundational Plant Dashboard Styles */
+:root {
+    --bg-color: #f5f7fa;
+    --sidebar-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --scan-btn: #10b981;
+    --scan-btn-hover: #059669;
+    --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    
+    /* Precise typography to sync gutter and textarea */
+    --editor-font-size: 13px;
+    --editor-line-height: 24px;
+    --editor-padding-y: 12px;
+} /*[cite: 5] */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+} /*[cite: 5] */
+
+body, html {
+    height: 100vh;
+    font-family: var(--font-main);
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    overflow: hidden;
+} /*[cite: 5] */
+
+/* Custom scrollbar configurations for industrial dashboard aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+} /*[cite: 6] */
+
+::-webkit-scrollbar-track {
+    background: #0f172a;
+} /*[cite: 6] */
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+} /*[cite: 6] */
+
+::-webkit-scrollbar-thumb:hover {
+    background: #f97316;
+} /*[cite: 6] */

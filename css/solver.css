@@ -1,0 +1,6 @@
+/* SOLVER.CSS - Isolated framework for Tool 2 */
+/* Drag and drop analytical bay visual states */
+.drag-over {
+    border-color: #f97316 !important;
+    background-color: rgba(249, 115, 22, 0.1) !important;
+} /*[cite: 6] */
