@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Label Printer</title>
+
+    <!-- Standardized Directory CSS Links: Base first, then Specific -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/barcode-style.css">
+</head>
+<body>
+    <main class="barcode-workspace">
+        <section class="barcode-controls" aria-labelledby="pageTitle">
+            <a class="back-link" href="index.html">← Back to tools</a>
+            <div>
+                <p class="eyebrow">Print utility</p>
+                <h1 id="pageTitle">Barcode Label Printer</h1>
+                <p class="instructions">Enter a value to create an A4 sheet containing two CODE 128 barcodes.</p>
+            </div>
+
+            <div class="barcode-input-group">
+                <label for="barcodeInput">Barcode text</label>
+                <input
+                    id="barcodeInput"
+                    type="text"
+                    maxlength="80"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Enter text to print"
+                    aria-describedby="inputMessage"
+                >
+                <p id="inputMessage" class="input-message" aria-live="polite">Enter a value to enable printing.</p>
+            </div>
+
+            <button id="printButton" class="print-button" type="button" disabled>
+                <span aria-hidden="true">🖨️</span>
+                Print A4
+            </button>
+        </section>
+
+        <section class="preview-area" aria-label="A4 print preview">
+            <article id="printSheet" class="print-sheet">
+                <header class="sheet-header">
+                    <p>Barcode sheet</p>
+                    <time id="printedDate"></time>
+                </header>
+
+                <div class="barcode-block">
+                    <p class="barcode-label">Identifier</p>
+                    <svg id="fixedBarcode" class="barcode-image" role="img" aria-label="CODE 128 barcode for MTFLINN"></svg>
+                    <p class="barcode-caption">MTFLINN</p>
+                </div>
+
+                <div id="customBarcodeBlock" class="barcode-block barcode-block--pending">
+                    <p class="barcode-label">Entered value</p>
+                    <svg id="customBarcode" class="barcode-image" role="img" aria-label="CODE 128 barcode for the entered value"></svg>
+                    <p id="customBarcodeCaption" class="barcode-caption">Your text will appear here</p>
+                </div>
+
+                <footer class="sheet-footer">CODE 128</footer>
+            </article>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script src="js/barcode-app.js"></script>
+</body>
+</html>
